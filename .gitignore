@@ -1,0 +1,53 @@
+# Audio files — generated artifacts and the bumper tracks (the latter ship as a
+# GitHub Release asset fetched by install.sh, not committed to git).
+*.mp3
+*.aiff
+*.wav
+*.ogg
+*.m4a
+
+# Exception: the committed demo episode + cold-open clip in samples/ (so people can
+# hear it before installing). Everything else audio stays ignored.
+!samples/
+!samples/*.mp3
+
+# Generated cover art
+cover.jpg
+cover.png
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+.pytest_cache/
+
+# Personal config (ship the .example versions instead)
+config.yaml
+profile.yaml
+.env
+
+# Local backups of personal config (may contain secrets)
+.config-backups/
+
+# Local SQLite store
+*.db
+
+# Generated episode metadata
+briefings/episode.json
+
+# macOS
+.DS_Store
+
+# Local Claude Code settings (machine-specific)
+.claude/settings.local.json
+
+# Auth tokens must never be committed (CLI stores these in ~/.config, but just in case)
+token.json
+
+# Run logs
+briefings/*.log
+
+# Music tracks live in briefing/assets/ but are fetched by install.sh (release asset),
+# not committed — see briefing/assets/ATTRIBUTION.md. The packaged zip is gitignored too.
+dist/

@@ -1,0 +1,236 @@
+#!/usr/bin/env python3
+"""
+Render a two-host briefing script to a single dated MP3.
+
+Input (briefings/briefing.txt): one line per turn, prefixed with a speaker tag
+(AVA: / ANDREW:). Lines without a tag continue the previous speaker. A `[[SEG]]` marker
+line is a segment boundary — the renderer inserts a longer pause and a music bumper there.
+
+Music: with a folder of tracks (config render.music.dir, default briefing/assets), the
+renderer cuts a fresh snippet per boundary and an intro, rotating song/section by date.
+Without tracks it falls back to a generated synth bumper. Everything is normalized to
+44.1 kHz mono so the music keeps its high end.
+
+edge-tts (via `python -m edge_tts`) and ffmpeg are invoked as subprocesses (not imported).
+"""
+import subprocess
+import sys
+import tempfile
+from datetime import date
+from pathlib import Path
+
+DEFAULT_VOICES = {"AVA": "en-US-AvaNeural", "ANDREW": "en-US-AndrewNeural"}
+SCRIPT_FILE = "briefing.txt"
+SEG_MARKER = "[[SEG]]"
+SR = "44100"                    # common sample rate (music keeps its high end; voice upsampled)
+
+STING_MOTIFS = [
+    [523.25, 659.25, 783.99], [440.00, 659.25], [587.33, 493.88, 392.00],
+    [392.00, 523.25, 659.25], [659.25, 587.33, 880.00],
+]
+
+from ..paths import REPO_ROOT   # pathlib-only; safe even when config (yaml) isn't importable
+
+BRIEFINGS_DIR = REPO_ROOT / "briefings"
+
+
+def _config():
+    try:
+        from ..config import load_config
+        cfg = load_config()
+        return cfg.get("voices") or DEFAULT_VOICES, cfg.get("render") or {}
+    except Exception:
+        return DEFAULT_VOICES, {}
+
+
+VOICES, _RENDER = _config()
+RATE = _RENDER.get("rate", "+0%")
+TURN_GAP = float(_RENDER.get("gap_seconds", 0.40))
+SEGMENT_GAP = float(_RENDER.get("segment_gap_seconds", 0.7))
+STING = _RENDER.get("sting", "generated")
+INTRO = _RENDER.get("intro", "generated")
+MUSIC = _RENDER.get("music") or {}
+ASSETS = REPO_ROOT / "briefing" / "assets"
+
+
+def run(cmd):
+    res = subprocess.run(cmd, capture_output=True, text=True)
+    if res.returncode != 0:
+        sys.stderr.write(res.stderr)
+        raise SystemExit(f"command failed: {' '.join(cmd)}")
+    return res
+
+
+def parse_turns(text):
+    turns, seg_break = [], False
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        if line == SEG_MARKER:
+            seg_break = True
+            continue
+        spk = None
+        for tag in VOICES:
+            if line.upper().startswith(tag + ":"):
+                spk, content = tag, line[len(tag) + 1:].strip()
+                break
+        if spk:
+            turns.append({"spk": spk, "text": content, "seg_break": seg_break})
+            seg_break = False
+        elif turns:
+            turns[-1]["text"] += " " + line
+        else:
+            raise SystemExit(f"First non-blank line must start with a speaker tag {list(VOICES)}: {line!r}")
+    return turns
+
+
+def _silence(path, seconds):
+    run(["ffmpeg", "-y", "-f", "lavfi", "-i",
+         f"anullsrc=channel_layout=mono:sample_rate={SR}", "-t", str(seconds), "-q:a", "9", str(path)])
+
+
+def _tone_input(freq):
+    return (f"aevalsrc=0.6*sin(2*PI*{freq}*t)*exp(-3.5*t)"
+            f"+0.25*sin(2*PI*{2 * freq}*t)*exp(-5*t):d=0.45:s={SR}")
+
+
+def _make_sting(path, motif, td, key):
+    notes = []
+    for j, freq in enumerate(motif):
+        n = td / f"note_{key}_{j}.mp3"
+        run(["ffmpeg", "-y", "-f", "lavfi", "-i", _tone_input(freq), "-q:a", "9", str(n)])
+        notes.append(n)
+    lst = td / f"sting_{key}.txt"
+    lst.write_text("".join(f"file '{p}'\n" for p in notes))
+    run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(lst),
+         "-af", f"aecho=0.8:0.7:90:0.35,volume=0.32,apad=pad_dur=0.5,"
+                f"aformat=channel_layouts=mono:sample_rates={SR}", "-q:a", "9", str(path)])
+
+
+def _make_intro(path, td):
+    notes = []
+    motif = [392.00, 523.25, 659.25, 783.99, 1046.50]
+    for j, freq in enumerate(motif):
+        n = td / f"intro_{j}.mp3"
+        dur = 0.7 if j == len(motif) - 1 else 0.32
+        run(["ffmpeg", "-y", "-f", "lavfi", "-i",
+             f"aevalsrc=0.5*sin(2*PI*{freq}*t)*exp(-2.2*t)+0.25*sin(2*PI*{2*freq}*t)*exp(-3.5*t)"
+             f"+0.15*sin(2*PI*{freq/2}*t)*exp(-1.5*t):d={dur}:s={SR}", "-q:a", "9", str(n)])
+        notes.append(n)
+    lst = td / "intro.txt"
+    lst.write_text("".join(f"file '{p}'\n" for p in notes))
+    run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(lst),
+         "-af", f"aecho=0.8:0.7:110:0.4,volume=0.4,apad=pad_dur=0.7,"
+                f"aformat=channel_layouts=mono:sample_rates={SR}", "-q:a", "9", str(path)])
+
+
+def _resolve_file(value, td, name):
+    """A provided audio file -> re-encoded to mono 44.1k, or None."""
+    if not value or value in ("none", "generated"):
+        return None
+    src = Path(value)
+    if not src.is_absolute():
+        src = ASSETS / value
+    if not src.exists():
+        print(f"  ! audio asset not found: {src}")
+        return None
+    out = td / name
+    run(["ffmpeg", "-y", "-i", str(src), "-ac", "1", "-ar", SR, "-q:a", "4", str(out)])
+    return out
+
+
+def main():
+    turns = parse_turns((BRIEFINGS_DIR / SCRIPT_FILE).read_text())
+    if not turns:
+        raise SystemExit("no turns parsed from script")
+    out = BRIEFINGS_DIR / f"briefing-{date.today().isoformat()}.mp3"
+    boundaries = sum(1 for i, t in enumerate(turns) if i > 0 and t["seg_break"])
+
+    with tempfile.TemporaryDirectory() as td:
+        td = Path(td)
+        turn_gap = td / "turn_gap.mp3"
+        seg_gap = td / "seg_gap.mp3"
+        _silence(turn_gap, TURN_GAP)
+        _silence(seg_gap, SEGMENT_GAP)
+
+        intro_clip, boundary_clips = _build_audio(td, boundaries)
+
+        clips, b = [], 0
+        if intro_clip:
+            clips.extend([intro_clip, seg_gap])
+        for i, t in enumerate(turns):
+            if i > 0:
+                if t["seg_break"]:
+                    clips.append(seg_gap)
+                    if b < len(boundary_clips) and boundary_clips[b]:
+                        clips.append(boundary_clips[b])
+                    b += 1
+                    clips.append(turn_gap)
+                else:
+                    clips.append(turn_gap)
+            raw = td / f"raw_{i:03d}.mp3"
+            run([sys.executable, "-m", "edge_tts", "--voice", VOICES[t["spk"]], "--rate", RATE,
+                 "--text", t["text"], "--write-media", str(raw)])
+            seg = td / f"turn_{i:03d}.mp3"
+            run(["ffmpeg", "-y", "-i", str(raw), "-ac", "1", "-ar", SR, "-q:a", "4", str(seg)])
+            clips.append(seg)
+            print(f"  [{t['spk']:6}]{' *' if t['seg_break'] else '  '}{t['text'][:58]}")
+
+        listfile = td / "concat.txt"
+        listfile.write_text("".join(f"file '{p}'\n" for p in clips))
+        run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(listfile),
+             "-c", "copy", str(out)])
+
+    print(f"\nWrote {out}")
+    return out
+
+
+def _build_audio(td, boundaries):
+    """Return (intro_clip, [boundary_clips]). Prefer real music; fall back to synth/file/none."""
+    # --- music engine ---
+    if MUSIC.get("enabled", True):
+        from . import music
+        mdir = MUSIC.get("dir", "briefing/assets")
+        mpath = Path(mdir) if Path(mdir).is_absolute() else REPO_ROOT / mdir
+        tracks = music.list_tracks(mpath)
+        if tracks:
+            seed = int(date.today().strftime("%Y%m%d"))
+            eng = music.MusicEngine(tracks, seed,
+                                    MUSIC.get("min_seconds", 4), MUSIC.get("max_seconds", 14))
+            intro_clip = None
+            ic = eng.intro_cue(MUSIC.get("intro_seconds", 12))
+            if ic:
+                intro_clip = td / "intro_music.mp3"
+                music.extract(ic, intro_clip)
+            bclips = []
+            for k, cue in enumerate(eng.plan_cues(boundaries)):
+                p = td / f"bound_{k:02d}.mp3"
+                music.extract(cue, p)
+                bclips.append(p)
+            print(f"  music: {len(tracks)} tracks, {len(bclips)} boundary cues + intro")
+            return intro_clip, bclips
+
+    # --- generated synth fallback (or provided single files / none) ---
+    intro_clip = _resolve_file(INTRO, td, "intro.mp3")
+    if INTRO == "generated":
+        intro_clip = td / "intro.mp3"
+        _make_intro(intro_clip, td)
+
+    if STING == "generated":
+        stings = []
+        for i, motif in enumerate(STING_MOTIFS):
+            s = td / f"sting_{i}.mp3"
+            _make_sting(s, motif, td, i)
+            stings.append(s)
+        bclips = [stings[k % len(stings)] for k in range(boundaries)]
+    elif STING and STING != "none":
+        one = _resolve_file(STING, td, "sting.mp3")
+        bclips = [one for _ in range(boundaries)]
+    else:
+        bclips = [None for _ in range(boundaries)]
+    return intro_clip, bclips
+
+
+if __name__ == "__main__":
+    main()

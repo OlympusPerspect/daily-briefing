@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SIGNAL — Daily Briefing Config</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;background:#0c100f;background-image:radial-gradient(60% 50% at 50% 0%,#11201b 0%,#0c100f 70%);
+       font-family:'Space Grotesk',sans-serif;display:flex;justify-content:center;padding:48px 24px;}
+  ::placeholder{color:#46544e}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+  @keyframes scanmove{from{transform:translateY(-160px)}to{transform:translateY(1100px)}}
+  @keyframes spinslow{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+  .lbl{font:500 11px 'IBM Plex Mono',monospace;letter-spacing:.18em;color:#5f7269;margin-bottom:9px;}
+  input.txt{width:100%;background:rgba(7,13,12,0.7);border:1px solid rgba(52,211,153,0.18);border-radius:3px;
+            padding:12px 14px;color:#dcefe6;font:500 15px 'Space Grotesk';outline:none;}
+  input.mono{font:500 13px 'IBM Plex Mono',monospace;padding:10px 14px;}
+  input.txt:focus{border-color:#34d399;box-shadow:0 0 0 2px rgba(52,211,153,0.14)}
+  input.avoidf:focus{border-color:#e07a7a;box-shadow:0 0 0 2px rgba(224,122,122,0.14)}
+  .opt{position:relative;overflow:hidden;cursor:pointer;border-radius:3px;background:rgba(255,255,255,0.012);transition:border-color .15s}
+  .opt .fill{position:absolute;inset:0;opacity:0}
+  .opt.sel .fill{opacity:1}
+  .chipx{cursor:pointer;opacity:.75}
+  .chipx:hover{opacity:1}
+  button#save{border:none;cursor:pointer;padding:14px 28px;border-radius:4px;background:linear-gradient(120deg,#1db954,#34d399);
+              color:#04140d;font:700 14px 'Space Grotesk';letter-spacing:.06em;box-shadow:0 0 28px rgba(52,211,153,0.45);
+              display:flex;align-items:center;gap:9px;transition:box-shadow .2s,transform .2s}
+  button#save:hover{box-shadow:0 0 42px rgba(52,211,153,0.8);transform:translateY(-1px)}
+  input[type=range].tone{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;margin:0}
+</style>
+</head>
+<body>
+<div style="width:1180px;max-width:100%;position:relative;overflow:hidden;border-radius:10px;border:1px solid rgba(52,211,153,0.16);background:linear-gradient(180deg,#060d0e,#04080a);box-shadow:0 36px 90px rgba(0,0,0,0.6);">
+  <canvas id="amb" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;opacity:.7;"></canvas>
+  <div style="position:absolute;inset:0;background-image:linear-gradient(rgba(52,211,153,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(52,211,153,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;"></div>
+  <div style="position:absolute;left:0;right:0;top:0;height:160px;background:linear-gradient(180deg,transparent,rgba(52,211,153,0.06),transparent);animation:scanmove 8s linear infinite;pointer-events:none;"></div>
+
+  <div style="position:relative;">
+    <!-- header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 30px;border-bottom:1px solid rgba(52,211,153,0.14);">
+      <div style="display:flex;align-items:baseline;gap:13px;">
+        <span style="font:700 20px 'Space Grotesk';letter-spacing:.14em;color:#eafff6;">SIGNAL</span>
+        <span style="font:500 11px 'IBM Plex Mono',monospace;letter-spacing:.22em;color:#3fae8c;">//DAILY.CAST</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:9px;font:500 11px 'IBM Plex Mono',monospace;letter-spacing:.16em;color:#34d399;"><span style="width:7px;height:7px;border-radius:50%;background:#34d399;box-shadow:0 0 10px #34d399;animation:blink 2s infinite;"></span>ONLINE · OS: <span id="os-badge" style="color:#7d9088;">—</span> · CONFIGURATION FEED</div>
+    </div>
+
+    <!-- orb hero -->
+    <div style="display:flex;flex-direction:column;align-items:center;padding:26px 0 18px;border-bottom:1px solid rgba(52,211,153,0.1);">
+      <div style="position:relative;width:230px;height:230px;display:flex;align-items:center;justify-content:center;">
+        <div style="position:absolute;width:218px;height:218px;border-radius:50%;background:conic-gradient(from 0deg, rgba(52,211,153,0) 0%, rgba(52,211,153,0.4) 18%, rgba(34,211,238,0.32) 42%, rgba(167,139,250,0.32) 66%, rgba(251,191,36,0.28) 84%, rgba(52,211,153,0) 100%);-webkit-mask:radial-gradient(circle, transparent 60%, #000 61%, #000 63%, transparent 64%);mask:radial-gradient(circle, transparent 60%, #000 61%, #000 63%, transparent 64%);animation:spinslow 18s linear infinite;"></div>
+        <canvas id="orb" style="position:relative;width:230px;height:230px;"></canvas>
+      </div>
+      <div style="font:600 38px 'Space Grotesk';letter-spacing:.18em;color:#eafff6;margin-top:2px;text-shadow:0 0 30px rgba(52,211,153,0.4);">SIGNAL</div>
+      <div style="font:500 11px 'IBM Plex Mono',monospace;letter-spacing:.34em;color:#3fae8c;margin-top:7px;">YOUR DAILY INTELLIGENCE BRIEFING</div>
+    </div>
+
+    <!-- body -->
+    <div style="display:grid;grid-template-columns:276px 1fr;">
+      <!-- left readout -->
+      <div style="padding:26px 24px;border-right:1px solid rgba(52,211,153,0.12);background:rgba(6,12,11,0.4);">
+        <div style="font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.2em;color:#54655e;margin-bottom:18px;">┌ LIVE READOUT</div>
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          <div><div style="font:500 9px 'IBM Plex Mono',monospace;letter-spacing:.18em;color:#54655e;">LISTENER</div><div id="r-name" style="font:600 16px 'Space Grotesk';color:#dcefe6;margin-top:3px;">—</div></div>
+          <div><div style="font:500 9px 'IBM Plex Mono',monospace;letter-spacing:.18em;color:#54655e;">SHOW</div><div id="r-show" style="font:600 14px 'Space Grotesk';color:#dcefe6;margin-top:3px;">—</div></div>
+          <div><div style="font:500 9px 'IBM Plex Mono',monospace;letter-spacing:.18em;color:#54655e;">LOCATION</div><div id="r-loc" style="font:600 14px 'Space Grotesk';color:#dcefe6;margin-top:3px;">—</div></div>
+          <div><div style="font:500 9px 'IBM Plex Mono',monospace;letter-spacing:.18em;color:#54655e;">HEADLINE FOCUS</div><div id="r-top" style="font:600 13px 'Space Grotesk';color:#34d399;margin-top:3px;line-height:1.35;">—</div></div>
+          <div><div style="font:500 9px 'IBM Plex Mono',monospace;letter-spacing:.18em;color:#54655e;">VECTORS</div><div id="r-vec" style="font:600 16px 'Space Grotesk';color:#34d399;margin-top:3px;">0 ACTIVE</div></div>
+          <div style="display:flex;gap:18px;">
+            <div><div style="font:500 9px 'IBM Plex Mono',monospace;letter-spacing:.18em;color:#54655e;">LENGTH</div><div id="r-len" style="font:600 16px 'Space Grotesk';color:#a78bfa;margin-top:3px;">10m</div></div>
+            <div><div style="font:500 9px 'IBM Plex Mono',monospace;letter-spacing:.18em;color:#54655e;">DROP</div><div id="r-drop" style="font:600 16px 'Space Grotesk';color:#fbbf24;margin-top:3px;">8:00 AM</div></div>
+          </div>
+          <div><div style="font:500 9px 'IBM Plex Mono',monospace;letter-spacing:.18em;color:#54655e;">VOICE</div><div id="r-voice" style="font:600 16px 'Space Grotesk';letter-spacing:.06em;color:#22d3ee;margin-top:3px;">AVA</div></div>
+          <div><div style="font:500 9px 'IBM Plex Mono',monospace;letter-spacing:.18em;color:#54655e;">TONE</div><div id="r-tone" style="font:600 16px 'Space Grotesk';color:#fbbf24;margin-top:3px;">BALANCED</div></div>
+        </div>
+        <div style="margin-top:26px;height:1px;background:rgba(52,211,153,0.12);"></div>
+        <div id="r-sys" style="margin-top:18px;font:400 11px 'IBM Plex Mono',monospace;line-height:1.7;color:#46544e;">—</div>
+      </div>
+
+      <!-- right fields -->
+      <div style="padding:26px 30px;display:flex;flex-direction:column;gap:24px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+          <div>
+            <div class="lbl">┌─ IDENTIFY ──────</div>
+            <input id="name" class="txt" placeholder="Listener name"/>
+          </div>
+          <div>
+            <div class="lbl">┌─ LOCATION ──────</div>
+            <input id="location" class="txt" placeholder="City, State (e.g. Boston, MA)"/>
+          </div>
+        </div>
+
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;">
+            <div class="lbl" style="margin:0;">┌─ HEADLINE FOCUS ──────</div>
+            <div id="top-count" style="font:600 10px 'IBM Plex Mono',monospace;letter-spacing:.14em;color:#34d399;">0/3</div>
+          </div>
+          <div style="font:400 10px 'IBM Plex Mono',monospace;color:#54655e;margin:5px 0 9px;">up to 3 lead themes — these set the tone of the whole briefing</div>
+          <div id="top-chips" style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px;"></div>
+          <input id="top-input" class="txt mono" placeholder="&gt; add a focus + Enter" style="margin-bottom:11px;"/>
+          <div id="top-suggest" style="display:flex;flex-wrap:wrap;gap:7px;"></div>
+        </div>
+
+        <div>
+          <div class="lbl">┌─ BROADER INTERESTS ──────</div>
+          <div style="font:400 10px 'IBM Plex Mono',monospace;color:#54655e;margin:-3px 0 9px;">also covered, lighter touch — add as many as you like</div>
+          <div id="other-chips" style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px;"></div>
+          <input id="other-input" class="txt mono" placeholder="&gt; add interest + Enter" style="margin-bottom:11px;"/>
+          <div id="other-suggest" style="display:flex;flex-wrap:wrap;gap:7px;"></div>
+        </div>
+
+        <div>
+          <div class="lbl">┌─ REGION OF FOCUS ──────</div>
+          <div id="region-chips" style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px;"></div>
+          <input id="region-input" class="txt mono" placeholder="&gt; add region + Enter" style="margin-bottom:11px;"/>
+          <div id="region-suggest" style="display:flex;flex-wrap:wrap;gap:7px;"></div>
+        </div>
+
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;">
+            <div class="lbl" style="margin:0;">┌─ LENGTH ──────</div>
+            <div id="len-label" style="font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.16em;color:#a78bfa;">10 MIN</div>
+          </div>
+          <div style="position:relative;height:30px;">
+            <div style="position:absolute;top:50%;left:0;right:0;height:3px;transform:translateY(-50%);background:rgba(167,139,250,0.14);"></div>
+            <div id="len-fill" style="position:absolute;top:50%;left:0;height:3px;transform:translateY(-50%);background:linear-gradient(90deg,#7c5cf0,#a78bfa);box-shadow:0 0 12px rgba(167,139,250,0.5);width:20%;"></div>
+            <div id="len-dots" style="position:absolute;inset:0;"></div>
+            <div id="len-thumb" style="position:absolute;top:50%;transform:translate(-50%,-50%);width:14px;height:14px;border-radius:50%;background:#06120e;border:2px solid #a78bfa;box-shadow:0 0 14px rgba(167,139,250,0.8);left:20%;z-index:2;"></div>
+            <input id="length" class="tone" type="range" min="5" max="30" step="5" value="10" style="z-index:3;"/>
+          </div>
+          <div style="display:flex;justify-content:space-between;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.14em;color:#54655e;margin-top:2px;"><span>5 MIN</span><span>30 MIN</span></div>
+        </div>
+
+        <div>
+          <div class="lbl">┌─ DROP TIME ──────</div>
+          <div id="times" style="display:flex;gap:6px;"></div>
+          <div style="margin-top:11px;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.06em;color:#54655e;">auto-builds <span id="sched-note" style="color:#7d9088;">—</span></div>
+          <div style="margin-top:14px;">
+            <span style="font:500 11px 'IBM Plex Mono',monospace;letter-spacing:.14em;color:#5f7269;">SHOW NAME</span>
+            <input id="show-name" class="txt mono" placeholder="" style="margin-top:6px;padding:8px 11px;font-size:11px;"/>
+            <span id="show-name-hint" style="display:block;font:400 10px 'IBM Plex Mono',monospace;color:#54655e;margin-top:5px;">auto: —</span>
+          </div>
+          <div style="margin-top:13px;">
+            <span style="font:500 11px 'IBM Plex Mono',monospace;letter-spacing:.14em;color:#5f7269;">SPOTIFY SHOW ID</span>
+            <input id="show-id" class="txt mono" placeholder="spotify:show:033AAk…  (optional)" style="margin-top:6px;padding:8px 11px;font-size:11px;"/>
+            <span style="display:block;font:400 10px 'IBM Plex Mono',monospace;color:#54655e;margin-top:5px;">paste the <b style="color:#7d9088;">show_uri</b> from <b style="color:#7d9088;">save-to-spotify shows</b> (the whole <b style="color:#7d9088;">spotify:show:…</b> string) · blank = just the MP3</span>
+          </div>
+        </div>
+
+        <div>
+          <div class="lbl">┌─ HOST VOICE ──────</div>
+          <div id="voices" style="display:grid;grid-template-columns:1fr 1fr;gap:7px;"></div>
+        </div>
+
+        <div>
+          <div class="lbl">┌─ QUALITY ──────</div>
+          <div id="quality" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;"></div>
+        </div>
+
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
+            <div class="lbl" style="margin:0;">┌─ TONE ──────</div>
+            <div id="tone-label" style="font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.16em;color:#fbbf24;">BALANCED</div>
+          </div>
+          <div style="position:relative;height:34px;">
+            <div style="position:absolute;top:50%;left:0;right:0;height:3px;transform:translateY(-50%);background:rgba(52,211,153,0.12);"></div>
+            <div id="tone-fill" style="position:absolute;top:50%;left:0;height:3px;transform:translateY(-50%);background:linear-gradient(90deg,#34d399,#fbbf24);box-shadow:0 0 12px rgba(251,191,36,0.5);width:35%;"></div>
+            <div id="tone-thumb" style="position:absolute;top:50%;transform:translate(-50%,-50%);width:14px;height:14px;border-radius:2px;background:#06120e;border:2px solid #fbbf24;box-shadow:0 0 14px rgba(251,191,36,0.8);left:35%;"></div>
+            <input id="tone" class="tone" type="range" min="0" max="100" value="35"/>
+          </div>
+          <div style="display:flex;justify-content:space-between;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.14em;color:#54655e;"><span>SERIOUS</span><span>PLAYFUL</span></div>
+        </div>
+
+        <details style="margin-top:4px;">
+          <summary style="cursor:pointer;font:500 11px 'IBM Plex Mono',monospace;letter-spacing:.18em;color:#5f7269;">▸ ADVANCED · FINE-TUNING — force-cover / avoid</summary>
+          <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+            <div>
+              <div class="lbl" style="margin-top:0;">┌─ ALWAYS COVER ──</div>
+              <input id="cover-input" class="txt mono" style="padding:9px 13px;" placeholder="&gt; topic to never miss"/>
+              <div id="cover-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;"></div>
+            </div>
+            <div>
+              <div class="lbl" style="margin-top:0;">┌─ AVOID ──</div>
+              <input id="avoid-input" class="txt mono avoidf" style="padding:9px 13px;border-color:rgba(224,122,122,0.22);" placeholder="&gt; add + Enter"/>
+              <div id="avoid-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;"></div>
+            </div>
+          </div>
+        </details>
+
+        <details style="margin-top:4px;">
+          <summary style="cursor:pointer;font:500 11px 'IBM Plex Mono',monospace;letter-spacing:.18em;color:#5f7269;">▸ ADVANCED · NEWS FEEDS — <span id="feed-summary">built-in catalog + your own</span></summary>
+          <div style="margin-top:12px;">
+            <div style="font:500 9px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#54655e;margin-bottom:7px;">YOUR FEEDS</div>
+            <div id="feed-rows" style="display:flex;flex-direction:column;gap:7px;"></div>
+            <button id="feed-add" style="margin-top:9px;cursor:pointer;padding:7px 14px;border-radius:4px;background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.32);color:#bdf2df;font:600 11px 'Space Grotesk';">+ add feed</button>
+            <details style="margin-top:13px;">
+              <summary style="cursor:pointer;font:500 9px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#54655e;">▸ <span id="builtin-count">0</span> BUILT-IN FEEDS (always on)</summary>
+              <div id="builtin-list" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:5px;"></div>
+            </details>
+          </div>
+        </details>
+
+        <details style="margin-top:4px;">
+          <summary style="cursor:pointer;font:500 11px 'IBM Plex Mono',monospace;letter-spacing:.18em;color:#5f7269;">▸ ADVANCED · RAW CONFIG — every setting</summary>
+          <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div><div style="font:500 10px 'IBM Plex Mono',monospace;color:#54655e;margin-bottom:6px;">profile.yaml</div><textarea id="raw-profile" spellcheck="false" style="width:100%;height:240px;background:rgba(7,13,12,0.8);border:1px solid rgba(52,211,153,0.18);border-radius:3px;color:#cdeede;font:400 11px 'IBM Plex Mono',monospace;padding:10px;outline:none;resize:vertical;"></textarea></div>
+            <div><div style="font:500 10px 'IBM Plex Mono',monospace;color:#54655e;margin-bottom:6px;">config.yaml</div><textarea id="raw-config" spellcheck="false" style="width:100%;height:240px;background:rgba(7,13,12,0.8);border:1px solid rgba(52,211,153,0.18);border-radius:3px;color:#cdeede;font:400 11px 'IBM Plex Mono',monospace;padding:10px;outline:none;resize:vertical;"></textarea></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;margin-top:10px;">
+            <button id="save-raw" style="cursor:pointer;padding:9px 18px;border-radius:4px;background:rgba(52,211,153,0.14);border:1px solid rgba(52,211,153,0.4);color:#bdf2df;font:600 12px 'Space Grotesk';">Save raw YAML</button>
+            <span id="raw-status" style="font:500 10px 'IBM Plex Mono',monospace;color:#54655e;">edits here are saved on their own button</span>
+          </div>
+        </details>
+      </div>
+    </div>
+
+    <!-- footer -->
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:20px;padding:20px 30px;border-top:1px solid rgba(52,211,153,0.14);background:rgba(6,12,11,0.5);">
+      <div id="status" style="display:none;align-items:center;gap:9px;font:500 11px 'IBM Plex Mono',monospace;letter-spacing:.14em;color:#34d399;"><span style="width:7px;height:7px;border-radius:50%;background:#34d399;box-shadow:0 0 10px #34d399;animation:blink 1.4s infinite;"></span><span id="status-text">CONFIG SAVED · WRITTEN TO PROFILE.YAML</span></div>
+      <button id="save" style="margin-left:auto;">▶ SAVE CONFIG</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const TIMES = [{label:'Dawn',sub:'6:00 AM',val:'06:00'},{label:'Commute',sub:'8:00 AM',val:'08:00'},{label:'Midday',sub:'12:00 PM',val:'12:00'},{label:'Evening',sub:'7:00 PM',val:'19:00'}];
+const LEN_STOPS = [5,10,15,20,25,30];
+let SUGGEST = ['technology','defense','robotics','business','science','health','world','politics','sports','entertainment','local'];
+let REGION_SUGGEST = ['U.S.','Europe','Canada','South America','Asia'];
+let VOICES = [{id:'ava_andrew',name:'AVA & ANDREW',desc:'Ava ♀ expressive · Andrew ♂ warm'},{id:'aria_guy',name:'ARIA & GUY',desc:'Aria ♀ crisp · Guy ♂ easy'},{id:'jenny_brian',name:'JENNY & BRIAN',desc:'Jenny ♀ warm · Brian ♂ mellow'},{id:'emma_eric',name:'EMMA & ERIC',desc:'Emma ♀ bright · Eric ♂ calm'}];
+let QUALITY = [{id:'opus',name:'Highest quality',desc:'Opus everywhere'},{id:'mixed',name:'Balanced',desc:'Opus editor · Sonnet copy'},{id:'sonnet',name:'Economy',desc:'Sonnet everywhere'}];
+let SCHEDULER = '—';
+let BUILTIN = [];   // read-only shipped feed catalog
+const MAX_TOP = 3, LEAD_HOURS = 2;   // up-to-3 headline themes; fixed build buffer
+const TOP_SUGGEST = ['technology','business','world','politics','sports','science'];
+const BROADER_SUGGEST = ['technology','defense','robotics','business','science','health','world','politics','sports','entertainment','local'];
+const TOPIC_LABEL = {technology:'Technology',business:'Business & Finance',world:'World News',politics:'Politics',sports:'Sports',science:'Science',defense:'Defense',robotics:'Robotics',health:'Health',entertainment:'Entertainment',local:'Local'};
+const tlabel = t => TOPIC_LABEL[t] || String(t).replace(/\b\w/g,c=>c.toUpperCase());
+const normTopic = v => (v||'').trim().toLowerCase();
+
+const state = {name:'',location:'',top:['technology','business'],other:[],regions:['U.S.'],length:10,time:'08:00',quality:'mixed',voice:'ava_andrew',show_id:'',show_name:'',sources:[],tone:35,must_cover:[],avoid:[]};
+const inTop = t => state.top.includes(t);
+const inOther = t => state.other.includes(t);
+function setTop(t){ if(inTop(t)) state.top=state.top.filter(x=>x!==t); else if(state.top.length<MAX_TOP){ state.other=state.other.filter(x=>x!==t); state.top=[...state.top,t]; } }
+function setOther(t){ if(inOther(t)) state.other=state.other.filter(x=>x!==t); else { state.top=state.top.filter(x=>x!==t); state.other=[...state.other,t]; } }
+function autoShowName(){ const f=(state.name||'').trim().split(/\s+/)[0]; return f ? `${f}'s Daily Briefing` : 'Daily Briefing'; }
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function toneLabel(t){ return t<33?'ANALYTICAL':t<66?'BALANCED':'PLAYFUL'; }
+function snapLength(v){ const n=Math.round((+v||10)/5)*5; return Math.min(30,Math.max(5,n)); }
+function lenPct(v){ return (v-5)/25*100; }
+function timeDisplay(v){ const t=TIMES.find(x=>x.val===v); return t?t.sub:v; }
+function runTime(t, lead){ const [h,m]=t.split(':').map(Number); const tot=((h*60+m-(+lead||0)*60)%1440+1440)%1440; return String(Math.floor(tot/60)).padStart(2,'0')+':'+String(tot%60).padStart(2,'0'); }
+function voiceName(id){ const v=VOICES.find(x=>x.id===id); return v?v.name:(id||'').replace(/_/g,' & ').toUpperCase(); }
+
+function tag(text, kind, idx){
+  const col = kind==='avoid' ? '224,122,122' : kind==='region' ? '34,211,238' : '52,211,153';
+  const textCol = kind==='avoid' ? '#f0cccc' : kind==='region' ? '#cdf3f9' : (kind==='topic'?'#c8f7e6':'#bdf2df');
+  const pad = kind==='topic' ? '6px 8px 6px 11px' : '4px 7px 4px 10px';
+  const fs = kind==='topic' ? '12px' : '11px';
+  return `<span style="display:inline-flex;align-items:center;gap:7px;padding:${pad};border-radius:3px;background:rgba(${col},0.12);border:1px solid rgba(${col},0.4);color:${textCol};font:500 ${fs} 'IBM Plex Mono',monospace;">${esc(text)}<b class="chipx" data-kind="${kind}" data-i="${idx}">×</b></span>`;
+}
+
+function sugg(t, sel, act, disabled){
+  return `<div class="opt${sel?' sel':''}" data-act="${act}" data-val="${esc(t)}" style="padding:7px 12px;border:1px solid rgba(52,211,153,${sel?0.4:0.16});color:${sel?'#cdeede':(disabled?'#3c4a44':'#9fb3ab')};font:500 12px 'IBM Plex Mono',monospace;${disabled?'opacity:.45;pointer-events:none;':''}"><span class="fill" style="background:rgba(52,211,153,0.2);box-shadow:inset 0 0 0 1px #34d399;"></span><span style="position:relative;z-index:1;">${esc(tlabel(t))}</span></div>`;
+}
+
+function feedRow(s, i){
+  const opts = '<option value="">topic…</option>' + SUGGEST.map(t=>`<option value="${esc(t)}"${s.topic===t?' selected':''}>${esc(t)}</option>`).join('');
+  return `<div style="display:flex;gap:6px;align-items:center;">`
+    + `<input class="feed-f txt mono" data-i="${i}" data-k="name" value="${esc(s.name)}" placeholder="name" style="flex:0 0 22%;padding:6px 8px;font-size:11px;"/>`
+    + `<input class="feed-f txt mono" data-i="${i}" data-k="url" value="${esc(s.url)}" placeholder="https://…/rss" style="flex:1;padding:6px 8px;font-size:11px;"/>`
+    + `<select class="feed-f" data-i="${i}" data-k="topic" style="flex:0 0 23%;padding:6px;font:500 11px 'IBM Plex Mono',monospace;background:rgba(7,13,12,0.85);color:#cdeede;border:1px solid rgba(52,211,153,0.18);border-radius:3px;outline:none;">${opts}</select>`
+    + `<b class="chipx" data-kind="feed" data-i="${i}" style="color:#7d9088;">×</b></div>`;
+}
+
+function renderFeeds(){
+  $('feed-rows').innerHTML = state.sources.length
+    ? state.sources.map(feedRow).join('')
+    : '<span style="font:400 10px monospace;color:#46544e;">no custom feeds yet — the built-in catalog still runs</span>';
+  $('builtin-count').textContent = BUILTIN.length;
+  $('feed-summary').textContent = `${BUILTIN.length} built-in + ${state.sources.length} custom`;
+  $('builtin-list').innerHTML = BUILTIN.map(b=>`<span style="padding:3px 8px;border-radius:3px;background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.15);color:#7d9088;font:500 10px 'IBM Plex Mono',monospace;">${esc(b.name)}</span>`).join('');
+}
+
+function render(){
+  $('name').value = state.name;
+  $('r-name').textContent = state.name || '—';
+  $('r-vec').textContent = (state.top.length + state.other.length) + ' ACTIVE';
+  $('r-len').textContent = state.length + 'm';
+  $('r-drop').textContent = timeDisplay(state.time);
+  $('r-voice').textContent = voiceName(state.voice);
+  $('r-tone').textContent = toneLabel(state.tone);
+  $('r-sys').innerHTML = `SYS: builds daily at<br/>${runTime(state.time, LEAD_HOURS)} · ${LEAD_HOURS}h before<br/>your ${timeDisplay(state.time)} drop · ${esc(SCHEDULER)}`;
+  const rShow=$('r-show'); if(rShow) rShow.textContent = state.show_name || autoShowName();
+  const rLoc=$('r-loc'); if(rLoc) rLoc.textContent = state.location || '—';
+  const rTop=$('r-top'); if(rTop) rTop.textContent = state.top.length ? state.top.map(tlabel).join(' · ') : '—';
+
+  $('location').value = state.location;
+  $('top-count').textContent = state.top.length + '/' + MAX_TOP;
+  $('top-chips').innerHTML = state.top.map((t,i)=>tag(tlabel(t),'top',i)).join('');
+  const topFull = state.top.length >= MAX_TOP;
+  $('top-suggest').innerHTML = TOP_SUGGEST.map(t=>sugg(t, inTop(t), 'settop', topFull && !inTop(t))).join('');
+  $('other-chips').innerHTML = state.other.map((t,i)=>tag(tlabel(t),'other',i)).join('');
+  $('other-suggest').innerHTML = BROADER_SUGGEST.filter(t=>!inTop(t)).map(t=>sugg(t, inOther(t), 'setother', false)).join('');
+
+  $('region-chips').innerHTML = state.regions.map((t,i)=>tag(t,'region',i)).join('');
+  $('region-suggest').innerHTML = REGION_SUGGEST.map(l=>{
+    const sel = state.regions.includes(l);
+    return `<div class="opt${sel?' sel':''}" data-act="region" data-val="${esc(l)}" style="padding:7px 12px;border:1px solid rgba(34,211,238,${sel?0.45:0.16});color:${sel?'#dff8fc':'#8fa6ac'};font:500 12px 'IBM Plex Mono',monospace;"><span class="fill" style="background:rgba(34,211,238,0.16);box-shadow:inset 0 0 0 1px #22d3ee;"></span><span style="position:relative;z-index:1;">${esc(l)}</span></div>`;
+  }).join('');
+
+  const lp = lenPct(state.length);
+  $('length').value = state.length;
+  $('len-fill').style.width = lp + '%';
+  $('len-thumb').style.left = lp + '%';
+  $('len-label').textContent = state.length + ' MIN';
+  $('len-dots').innerHTML = LEN_STOPS.map(v=>{
+    const on = state.length >= v;
+    return `<span style="position:absolute;top:50%;transform:translate(-50%,-50%);width:6px;height:6px;border-radius:50%;left:${lenPct(v)}%;background:${on?'#a78bfa':'#2b2f3a'};box-shadow:${on?'0 0 6px rgba(167,139,250,0.7)':'none'};"></span>`;
+  }).join('');
+
+  $('times').innerHTML = TIMES.map(t=>{
+    const sel = state.time===t.val;
+    return `<div class="opt${sel?' sel':''}" data-act="time" data-val="${t.val}" style="flex:1;text-align:center;padding:7px 1px;border:1px solid rgba(251,191,36,${sel?0.45:0.18});"><span class="fill" style="background:rgba(251,191,36,0.18);box-shadow:inset 0 0 0 1px #fbbf24;"></span><div style="position:relative;z-index:1;font:600 13px 'Space Grotesk';color:#fff4d6;">${t.label}</div><div style="position:relative;z-index:1;font:500 11px 'IBM Plex Mono',monospace;color:#7d9088;margin-top:2px;">${t.sub}</div></div>`;
+  }).join('');
+
+  $('voices').innerHTML = VOICES.map(v=>{
+    const sel = state.voice===v.id;
+    return `<div class="opt${sel?' sel':''}" data-act="voice" data-val="${esc(v.id)}" style="display:flex;align-items:center;justify-content:space-between;padding:11px 13px;border:1px solid rgba(34,211,238,${sel?0.45:0.18});"><span class="fill" style="background:rgba(34,211,238,0.16);box-shadow:inset 0 0 0 1px #22d3ee;"></span><span style="position:relative;z-index:1;"><span style="font:600 14px 'Space Grotesk';letter-spacing:.06em;color:#dff8fc;">${esc(v.name)}</span><span style="display:block;font:400 10px 'IBM Plex Mono',monospace;color:#6f827b;">${esc(v.desc)}</span></span></div>`;
+  }).join('');
+
+  $('quality').innerHTML = QUALITY.map(q=>{
+    const sel = state.quality===q.id;
+    return `<div class="opt${sel?' sel':''}" data-act="quality" data-val="${esc(q.id)}" style="padding:9px 11px;border:1px solid rgba(167,139,250,${sel?0.45:0.18});"><span class="fill" style="background:rgba(167,139,250,0.18);box-shadow:inset 0 0 0 1px #a78bfa;"></span><span style="position:relative;z-index:1;"><span style="font:600 13px 'Space Grotesk';color:#eee9ff;">${esc(q.name)}</span><span style="display:block;font:400 10px 'IBM Plex Mono',monospace;color:#6f827b;">${esc(q.desc)}</span></span></div>`;
+  }).join('');
+
+  $('show-name').value = state.show_name;
+  $('show-name').placeholder = autoShowName();
+  $('show-name-hint').textContent = 'auto: ' + autoShowName();
+  $('show-id').value = state.show_id;
+  $('sched-note').textContent = `${runTime(state.time, LEAD_HOURS)} · ${LEAD_HOURS}h before your ${timeDisplay(state.time)} drop · ${SCHEDULER}`;
+
+  $('tone').value = state.tone;
+  $('tone-fill').style.width = state.tone + '%';
+  $('tone-thumb').style.left = state.tone + '%';
+  $('tone-label').textContent = toneLabel(state.tone);
+
+  $('cover-chips').innerHTML = state.must_cover.map((t,i)=>tag(t,'cover',i)).join('');
+  $('avoid-chips').innerHTML = state.avoid.map((t,i)=>tag(t,'avoid',i)).join('');
+  renderFeeds();
+}
+
+// events
+document.addEventListener('click', e=>{
+  const x = e.target.closest('.chipx');
+  if(x){
+    const kind=x.dataset.kind, i=+x.dataset.i;
+    if(kind==='top') state.top.splice(i,1);
+    else if(kind==='other') state.other.splice(i,1);
+    else if(kind==='feed') state.sources.splice(i,1);
+    else if(kind==='region') state.regions = state.regions.filter((_,j)=>j!==i);
+    else if(kind==='cover') state.must_cover = state.must_cover.filter((_,j)=>j!==i);
+    else if(kind==='avoid') state.avoid = state.avoid.filter((_,j)=>j!==i);
+    render(); return;
+  }
+  const opt = e.target.closest('.opt');
+  if(opt){
+    const act = opt.dataset.act, val = opt.dataset.val;
+    if(act==='settop') setTop(val);
+    else if(act==='setother') setOther(val);
+    else if(act==='region') state.regions = state.regions.includes(val) ? state.regions.filter(x=>x!==val) : [...state.regions,val];
+    else if(act==='quality') state.quality = val;
+    else if(act==='time') state.time = val;
+    else if(act==='voice') state.voice = val;
+    render(); return;
+  }
+});
+// custom-feed field edit — no re-render (keep focus)
+document.addEventListener('input', e=>{
+  if(e.target.classList.contains('feed-f')){
+    const i=+e.target.dataset.i; if(state.sources[i]) state.sources[i][e.target.dataset.k]=e.target.value;
+  }
+});
+$('feed-add').addEventListener('click', ()=>{ state.sources.push({name:'',url:'',topic:''}); render(); });
+// add a custom interest to either tier (Enter)
+$('top-input').addEventListener('keydown', e=>{ if(e.key!=='Enter') return; e.preventDefault(); const t=normTopic(e.target.value); if(t && !inTop(t) && state.top.length<MAX_TOP){ state.other=state.other.filter(x=>x!==t); state.top=[...state.top,t]; } e.target.value=''; render(); });
+$('other-input').addEventListener('keydown', e=>{ if(e.key!=='Enter') return; e.preventDefault(); const t=normTopic(e.target.value); if(t && !inOther(t)){ state.top=state.top.filter(x=>x!==t); state.other=[...state.other,t]; } e.target.value=''; render(); });
+$('name').addEventListener('input', e=>{ state.name=e.target.value; $('r-name').textContent=state.name||'—'; const rs=$('r-show'); if(rs) rs.textContent=state.show_name||autoShowName(); $('show-name').placeholder=autoShowName(); $('show-name-hint').textContent='auto: '+autoShowName(); });
+$('location').addEventListener('input', e=>{ state.location=e.target.value; const rl=$('r-loc'); if(rl) rl.textContent=state.location||'—'; });
+$('show-name').addEventListener('input', e=>{ state.show_name=e.target.value; const rs=$('r-show'); if(rs) rs.textContent=state.show_name||autoShowName(); });
+$('show-id').addEventListener('input', e=>{ state.show_id=e.target.value; });
+$('tone').addEventListener('input', e=>{ state.tone=+e.target.value; render(); });
+$('length').addEventListener('input', e=>{ state.length=snapLength(e.target.value); render(); });
+$('save-raw').addEventListener('click', async ()=>{
+  const btn=$('save-raw'), st=$('raw-status'); btn.textContent='Saving…';
+  try{
+    const r=await fetch('/api/raw',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profile:$('raw-profile').value, config:$('raw-config').value})});
+    const j=await r.json(); if(!r.ok||j.error) throw new Error(j.error||('HTTP '+r.status));
+    st.style.color='#34d399'; st.textContent='saved · reloading form…'; btn.textContent='Save raw YAML';
+    setTimeout(()=>location.reload(), 700);
+  }catch(err){ st.style.color='#e07a7a'; st.textContent='invalid YAML: '+err.message; btn.textContent='Save raw YAML'; }
+});
+function tagInput(inputId, key){
+  $(inputId).addEventListener('keydown', e=>{
+    if(e.key!=='Enter') return; e.preventDefault();
+    const v=(e.target.value||'').trim();
+    if(v && !state[key].includes(v)) state[key]=[...state[key],v];
+    e.target.value=''; render();
+  });
+}
+tagInput('region-input','regions'); tagInput('cover-input','must_cover'); tagInput('avoid-input','avoid');
+
+$('save').addEventListener('click', async ()=>{
+  const btn=$('save'); btn.textContent='▶ SAVING…';
+  try{
+    const r = await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(state)});
+    const j = await r.json();
+    if(!r.ok || j.error) throw new Error(j.error||('HTTP '+r.status));
+    $('status').style.display='flex'; $('status-text').textContent='CONFIG SAVED · WRITTEN TO PROFILE.YAML + CONFIG.YAML';
+    btn.textContent='▶ SAVED';
+  }catch(err){
+    $('status').style.display='flex'; $('status').style.color='#e07a7a';
+    $('status-text').textContent='SAVE FAILED · '+err.message;
+    btn.textContent='▶ SAVE CONFIG';
+  }
+});
+
+// load catalogs + current config
+async function load(){
+  try{ const m = await (await fetch('/api/meta')).json(); if(m.suggested) SUGGEST=m.suggested; if(m.voices) VOICES=m.voices; if(m.regions) REGION_SUGGEST=m.regions; if(m.quality) QUALITY=m.quality; if(m.scheduler) SCHEDULER=m.scheduler; if(m.os) $('os-badge').textContent=m.os; if(m.builtin_sources) BUILTIN=m.builtin_sources; }catch{}
+  try{
+    const c = await (await fetch('/api/config')).json();
+    Object.assign(state, {
+      name:c.name||'', location:c.location||'', top:c.top||[], other:c.other||[], regions:c.regions||['U.S.'],
+      length:snapLength(c.length||10), time:c.time||'08:00', quality:c.quality||'mixed',
+      voice:c.voice||VOICES[0].id, show_id:c.show_id||'', show_name:c.show_name||'', sources:c.sources||[], tone:+c.tone||35, must_cover:c.must_cover||[], avoid:c.avoid||[]
+    });
+  }catch{}
+  try{
+    const res = await fetch('/api/raw');
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const raw = await res.json();
+    $('raw-profile').value = raw.profile||''; $('raw-config').value = raw.config||'';
+  }catch(err){
+    const st=$('raw-status'); if(st){ st.style.color='#e0a85a'; st.textContent='could not load YAML ('+err.message+') — restart `brief config` to pick up the latest server'; }
+  }
+  render();
+}
+load();
+
+// ---- canvas animations (ported from the design reference) ----
+function sizeCanvas(c){
+  const r=c.getBoundingClientRect(); if(!r.width||!r.height) return null;
+  const dpr=Math.min(window.devicePixelRatio||1,2), w=Math.round(r.width*dpr), h=Math.round(r.height*dpr);
+  if(c.width!==w||c.height!==h){ c.width=w; c.height=h; }
+  const ctx=c.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); return {ctx,w:r.width,h:r.height};
+}
+function drawAmbient(c,t){
+  const d=sizeCanvas(c); if(!d) return; const {ctx,w,h}=d; ctx.clearRect(0,0,w,h);
+  if(!c.__p) c.__p=Array.from({length:50},()=>({x:Math.random()*w,y:Math.random()*h,s:0.12+Math.random()*0.5,r:0.6+Math.random()*1.6,ph:Math.random()*6,hue:Math.random()}));
+  const gx=w*0.5+Math.cos(t*0.3)*w*0.22, gy=h*0.32+Math.sin(t*0.25)*h*0.18;
+  const g=ctx.createRadialGradient(gx,gy,0,gx,gy,w*0.5); g.addColorStop(0,'rgba(16,185,129,0.05)'); g.addColorStop(1,'rgba(16,185,129,0)');
+  ctx.fillStyle=g; ctx.fillRect(0,0,w,h);
+  const cols=['110,231,216','34,211,238','167,139,250'];
+  for(const p of c.__p){ p.y-=p.s; if(p.y<-4) p.y=h+4; const a=Math.max(0,0.22+Math.sin(t*1.5+p.ph)*0.18);
+    ctx.beginPath(); ctx.fillStyle='rgba('+cols[(p.hue*3)|0]+','+a+')'; ctx.arc(p.x,p.y,p.r,0,7); ctx.fill(); }
+}
+function drawOrb(c,t){
+  const d=sizeCanvas(c); if(!d) return; const {ctx,w,h}=d; ctx.clearRect(0,0,w,h);
+  const cx=w/2, cy=h/2;
+  const core=ctx.createRadialGradient(cx,cy,0,cx,cy,w*0.46);
+  core.addColorStop(0,'rgba(52,211,153,0.22)'); core.addColorStop(0.5,'rgba(16,185,129,0.07)'); core.addColorStop(1,'rgba(6,16,13,0)');
+  ctx.fillStyle=core; ctx.fillRect(0,0,w,h);
+  const rc=['52,211,153','34,211,238','167,139,250'];
+  for(let i=0;i<3;i++){ const rr=w*0.22+i*w*0.075; ctx.save(); ctx.translate(cx,cy); ctx.rotate(t*(0.2+i*0.15)*(i%2?-1:1));
+    ctx.beginPath(); for(let k=0;k<4;k++){ ctx.arc(0,0,rr,k*Math.PI/2+0.2,k*Math.PI/2+Math.PI/2-0.2); ctx.moveTo(rr*Math.cos((k+1)*Math.PI/2+0.2),rr*Math.sin((k+1)*Math.PI/2+0.2)); }
+    ctx.strokeStyle='rgba('+rc[i]+','+(0.55-i*0.1)+')'; ctx.lineWidth=1.5; ctx.stroke(); ctx.restore(); }
+  const N=22; for(let i=0;i<N;i++){ const ang=t*0.5+i*(6.2832/N), rad=w*0.40+Math.sin(t*2+i)*4, x=cx+Math.cos(ang)*rad, y=cy+Math.sin(ang)*rad*0.96, col=rc[i%3];
+    ctx.beginPath(); ctx.fillStyle='rgba('+col+','+(0.4+0.5*Math.abs(Math.sin(t+i)))+')'; ctx.shadowColor='rgb('+col+')'; ctx.shadowBlur=8; ctx.arc(x,y,1.7,0,7); ctx.fill(); }
+  ctx.shadowBlur=0;
+  const sr=(t*30)%(w*0.46), sa=1-sr/(w*0.46);
+  ctx.beginPath(); ctx.strokeStyle='rgba(34,211,238,'+(sa*0.35)+')'; ctx.lineWidth=1; ctx.arc(cx,cy,sr,0,7); ctx.stroke();
+  const ir=w*0.085+Math.sin(t*2)*w*0.012, ig=ctx.createRadialGradient(cx,cy,0,cx,cy,ir);
+  ig.addColorStop(0,'#d7fff0'); ig.addColorStop(0.5,'#34d399'); ig.addColorStop(1,'rgba(16,185,129,0.1)');
+  ctx.fillStyle=ig; ctx.beginPath(); ctx.arc(cx,cy,ir,0,7); ctx.fill();
+}
+(function loop(){ const tick=now=>{ const t=now/1000; drawAmbient($('amb'),t); drawOrb($('orb'),t); requestAnimationFrame(tick); }; requestAnimationFrame(tick); })();
+</script>
+</body>
+</html>
